@@ -4,4 +4,46 @@ version = "0.1.0"
 description = "Demo project demonstrating multi-agent orchestration patterns"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "aiohttp>=3.14.3",
+    "azure-identity>=1.25.3",
+    "openai>=3.16.1",
+    "pydantic>=2.13.5",
+    "pydantic-settings>=2.15.0",
+    "python-dotenv>=1.2.3",
+    "rich>=15.0.0",
+    "typer>=0.27.2",
+]
+
+[project.scripts]
+app = "agentic.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.8.0,<1.0.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "agentic"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+extend-exclude = ["plans"]
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+venvPath = "."
+venv = ".venv"
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.414",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.16.7",
+]
