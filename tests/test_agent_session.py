@@ -132,3 +132,15 @@ async def test_failed_tool_call_is_returned_to_the_model(tmp_path: Path) -> None
 
     assert result.tool_calls[0].ok is False
     assert "invalid arguments" in (llm.requests[1][-1].content or "")
+
+
+async def test_open_questions_are_logged_in_agent_end(tmp_path: Path) -> None:
+    ctx, recorder = _session(tmp_path)
+    llm = ScriptedLLM([reply("Baixa Boutique.\n\nOpen questions:\n- Is a shared room OK?")])
+    agent = Agent(name="hotel", emoji="", instructions="", llm=llm)
+
+    result = await agent.run([Message.user("Find a hotel")], ctx)
+
+    assert result.open_questions == ["Is a shared room OK?"]
+    end = _events(recorder.folder(ctx.session_id))[-1]
+    assert (end.type, end.payload["open_questions"]) == (E.AGENT_END, ["Is a shared room OK?"])

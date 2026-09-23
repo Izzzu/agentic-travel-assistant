@@ -78,6 +78,7 @@ class ToolCallRecord(BaseModel):
 class AgentResult(BaseModel):
     agent: str
     text: str
+    open_questions: list[str] = Field(default_factory=list[str])
     tool_calls: list[ToolCallRecord] = Field(default_factory=list[ToolCallRecord])
     usage: Usage = Field(default_factory=Usage)
     ms: float = 0.0

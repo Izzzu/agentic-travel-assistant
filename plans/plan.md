@@ -13,9 +13,11 @@ A Python CLI demo showing **one problem solved by five orchestration patterns** 
 
 **Problem (identical for every pattern):**
 
-> *"Plan a 3-day Lisbon weekend in October for 3 friends. Budget CHF 1,500 total. They love food and the beach."*
+> *"Plan a 3-day Lisbon weekend, 9–11 October, for 3 friends. Budget CHF 1,500 total. They love food and the beach."*
 
-**Scripted surprise (identical for every pattern):** the best-value hotel (listed as the cheapest by search) returns **sold out** on `check_availability`. Every remaining naive option pushes the trip ~CHF 200 over budget, but a valid plan exists (cheaper area + free beach day instead of a paid tour).
+**Surprise (identical for every pattern), driven by data, not code:** on the demo weekend the best-value hotel (listed first and cheapest by search) is **sold out** according to its per-night availability, so `check_availability` says so. Every remaining naive option pushes the trip ~CHF 200 over budget, but a valid plan exists (cheaper area + free beach day instead of a paid tour).
+
+**Control prompt:** the same request for **16–18 October** — the best-value hotel is free, the naive plan lands exactly on budget, and there is no surprise.
 
 The surprise is what makes the patterns behave differently — without it, all five produce similar plans.
 
@@ -271,7 +273,7 @@ Specialists return an **`Open questions:`** section in their output when they la
 | Agent | Tools |
 |---|---|
 | ✈️ Flight | `search_flights(origin, dest, depart, return_date, pax)`, `get_flight_details(flight_id)` |
-| 🏨 Hotel | `search_hotels(city, checkin, checkout, guests, max_price=None)`, `check_availability(hotel_id)` ⚡ |
+| 🏨 Hotel | `search_hotels(city, checkin, checkout, guests, max_price=None)`, `check_availability(hotel_id, checkin, checkout)` ⚡ |
 | 🎭 Activities | `search_activities(city, interests, date=None)`, `get_opening_hours(activity_id)` |
 | 💰 Budget | `calculate_total(items)`, `check_budget(total, limit)`, `suggest_savings(items, target)` |
 
@@ -280,17 +282,18 @@ Specialists return an **`Open questions:`** section in their output when they la
 
 ### The surprise
 
-- `check_availability` returns `sold_out` for the best-value hotel (e.g. "Casa Alfama"), which `search_hotels` lists as the cheapest, and emits a `surprise` event.
-- Controlled via `--surprise / --no-surprise` (default: on).
+- No special-case code or flag: each hotel has `sold_out_nights` in `hotels.json`, and `check_availability` checks the requested nights against it.
+- Casa Alfama (listed first and cheapest by `search_hotels`) is sold out on 9–10 and 30–31 October, so the demo prompt's dates trigger the surprise and the control prompt's dates don't.
+- Other hotels have their own sold-out nights on other weekends, so availability looks realistic rather than staged.
 
 ### Mock data design
 
-- Flights: several ZRH ⇄ LIS options with varying times and prices, including one late arrival (22:00) to create timing conflicts.
-- Hotels: 4–6 options across Alfama, Baixa, Belém, Cais do Sodré; the cheapest one is the sold-out one.
-- Activities: food tours, restaurants, beach day (Cascais / Costa da Caparica), paid and free options with opening hours.
+- Flights: six ZRH ⇄ LIS options with varying times and prices, including one late arrival (22:00) and one with a stop.
+- Hotels: eight options across Alfama, Baixa, Cais do Sodré, Chiado, Belém, Graça, Príncipe Real and Cascais; the cheapest one is sold out on the demo weekend.
+- Activities: food tours, restaurants, beaches (Cascais, Carcavelos, Costa da Caparica), sightseeing; paid and near-free options with opening hours.
 - Tuned so that without the cheap hotel the naive plan is **~CHF 200 over budget**, while a valid plan still exists.
 
-**Done when:** unit tests for every tool pass, including the surprise and the budget math.
+**Done when:** unit tests for every tool pass, including availability per date and the budget math.
 
 ---
 
@@ -475,7 +478,6 @@ Common options:
 | Option | Purpose |
 |---|---|
 | `--verbose` / `-v` | tool args/results, LLM stats |
-| `--surprise` / `--no-surprise` | toggle the sold-out hotel (default: on) |
 | `--max-rounds N` | group chat round limit |
 | `--max-steps N` | Magentic step limit |
 | `--sessions-dir PATH` | where sessions are saved (default `sessions/`) |

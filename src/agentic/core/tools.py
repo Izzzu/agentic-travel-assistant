@@ -9,7 +9,19 @@ from pydantic_core import to_json
 
 from agentic.core.messages import ToolCall, ToolCallRecord, ToolSpec
 from agentic.core.session import SessionContext
-from agentic.logs.events import EventType
+from agentic.logs.events import Event, EventType
+
+
+@dataclass(frozen=True)
+class ToolContext:
+    """The session and the calling agent, as seen by a tool."""
+
+    session: SessionContext
+    agent: str
+    run_id: str | None = None
+
+    def emit(self, type: EventType, **payload: Any) -> Event:
+        return self.session.emit(type, agent=self.agent, run_id=self.run_id, **payload)
 
 
 @dataclass(frozen=True)
@@ -29,7 +41,7 @@ class Tool[**P, R]:
         schema.pop("title", None)
         return ToolSpec(name=self.name, description=self.description, parameters=schema)
 
-    async def invoke(self, arguments: str, ctx: SessionContext) -> Any:
+    async def invoke(self, arguments: str, ctx: ToolContext) -> Any:
         args = self.args_model.model_validate_json(arguments or "{}")
         kwargs: dict[str, Any] = dict(args)
         if self.context_param:
@@ -43,14 +55,14 @@ class Tool[**P, R]:
 def tool[**P, R](fn: Callable[P, R]) -> Tool[P, R]:
     """Turn a function into a tool; its docstring and type hints become the JSON schema.
 
-    A parameter annotated `SessionContext` is injected at call time and hidden from the model.
+    A parameter annotated `ToolContext` is injected at call time and hidden from the model.
     """
     hints = get_type_hints(fn, include_extras=True)
     fields: dict[str, Any] = {}
     context_param: str | None = None
     for param in inspect.signature(fn).parameters.values():
         annotation = hints.get(param.name, Any)
-        if annotation is SessionContext:
+        if annotation is ToolContext:
             context_param = param.name
             continue
         default = ... if param.default is inspect.Parameter.empty else param.default
@@ -94,7 +106,7 @@ async def execute_tool_call(
         selected = tools.get(call.name)
         if selected is None:
             raise LookupError(f"unknown tool {call.name!r}")
-        value = await selected.invoke(call.arguments, ctx)
+        value = await selected.invoke(call.arguments, ToolContext(ctx, agent, run_id))
         result = value if isinstance(value, str) else to_json(value).decode()
         ok = True
     except ValidationError as exc:

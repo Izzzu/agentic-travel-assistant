@@ -5,7 +5,7 @@ from pydantic import Field
 
 from agentic.core.messages import ToolCall
 from agentic.core.session import SessionContext
-from agentic.core.tools import execute_tool_call, tool
+from agentic.core.tools import ToolContext, execute_tool_call, tool
 from agentic.io.user_io import ScriptedIO
 from agentic.logs.bus import EventBus
 
@@ -24,9 +24,9 @@ def search_hotels(
 
 
 @tool
-async def whoami(question: str, ctx: SessionContext) -> str:
-    """Async tool that uses the injected session context."""
-    return f"{ctx.session_id}:{question}"
+async def whoami(question: str, ctx: ToolContext) -> str:
+    """Async tool that uses the injected tool context."""
+    return f"{ctx.session.session_id}:{ctx.agent}:{question}"
 
 
 def _ctx() -> SessionContext:
@@ -57,7 +57,7 @@ async def test_async_tool_receives_context() -> None:
     call = ToolCall(id="c1", name="whoami", arguments='{"question": "hi"}')
     record = await execute_tool_call(call, {"whoami": whoami}, ctx, agent="a")
     assert record.ok
-    assert record.result == f"{ctx.session_id}:hi"
+    assert record.result == f"{ctx.session_id}:a:hi"
 
 
 async def test_bad_calls_become_error_results() -> None:

@@ -1,3 +1,4 @@
+import re
 import secrets
 import time
 from collections.abc import Sequence
@@ -18,6 +19,31 @@ class AgentError(RuntimeError):
 def _summarize(messages: Sequence[Message], limit: int = 200) -> str:
     text = next((m.content for m in reversed(messages) if m.content), "")
     return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+_QUESTIONS_HEADING = re.compile(r"^[#*_\s]*open questions[*_\s]*(?::(?P<rest>.*))?$", re.IGNORECASE)
+_BULLET = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+(?P<text>.+)$")
+_NONE = {"", "none", "n/a", "-"}
+
+
+def parse_open_questions(text: str) -> list[str]:
+    """Items listed under an `Open questions:` heading, as specialists are told to write them."""
+    lines = text.splitlines()
+    start = next((i for i, line in enumerate(lines) if _QUESTIONS_HEADING.match(line)), None)
+    if start is None:
+        return []
+    heading = _QUESTIONS_HEADING.match(lines[start])
+    questions = [(heading["rest"] if heading and heading["rest"] else "").strip(" *_")]
+    for line in lines[start + 1 :]:
+        if not line.strip():
+            if len(questions) > 1:
+                break
+            continue
+        bullet = _BULLET.match(line)
+        if bullet is None:
+            break
+        questions.append(bullet["text"].strip())
+    return [q for q in questions if q.lower().rstrip(".") not in _NONE]
 
 
 @dataclass
@@ -83,13 +109,22 @@ class Agent:
             )
             raise
         ms = round((time.perf_counter() - started) * 1000, 1)
+        open_questions = parse_open_questions(text)
         ctx.emit(
             EventType.AGENT_END,
             agent=self.name,
             run_id=run_id,
             output=text,
+            open_questions=open_questions,
             tool_calls=len(records),
             tokens=usage.total_tokens,
             ms=ms,
         )
-        return AgentResult(agent=self.name, text=text, tool_calls=records, usage=usage, ms=ms)
+        return AgentResult(
+            agent=self.name,
+            text=text,
+            open_questions=open_questions,
+            tool_calls=records,
+            usage=usage,
+            ms=ms,
+        )
