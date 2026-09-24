@@ -10,6 +10,10 @@ from rich.markup import escape
 class UserIO(Protocol):
     async def ask(self, agent: str, question: str) -> str: ...
 
+    async def read(self, prompt: str) -> str:
+        """Next chat message; raises EOFError when the user is done."""
+        ...
+
 
 class ConsoleIO:
     def __init__(self, console: Console | None = None) -> None:
@@ -21,16 +25,29 @@ class ConsoleIO:
             prompt = f"[bold]{escape(agent)} asks:[/] {escape(question)}\n[bold]you>[/] "
             return await asyncio.to_thread(self._console.input, prompt)
 
+    async def read(self, prompt: str) -> str:
+        async with self._lock:
+            # Blocking on purpose: nothing runs between turns, and Ctrl+C exits at once.
+            return self._console.input(f"\n[bold]{escape(prompt)}[/] ")
+
 
 class ScriptedIO:
-    """Answers questions from a fixed list, for tests."""
+    """Answers questions and sends chat messages from fixed lists, for tests."""
 
-    def __init__(self, answers: Iterable[str] = ()) -> None:
+    def __init__(self, answers: Iterable[str] = (), *, inputs: Iterable[str] = ()) -> None:
         self._answers = deque(answers)
+        self._inputs = deque(inputs)
         self.asked: list[tuple[str, str]] = []
+        self.prompts: list[str] = []
 
     async def ask(self, agent: str, question: str) -> str:
         self.asked.append((agent, question))
         if not self._answers:
             raise RuntimeError(f"ScriptedIO has no answer for {agent}: {question!r}")
         return self._answers.popleft()
+
+    async def read(self, prompt: str) -> str:
+        self.prompts.append(prompt)
+        if not self._inputs:
+            raise EOFError
+        return self._inputs.popleft()
