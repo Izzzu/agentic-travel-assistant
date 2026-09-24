@@ -63,15 +63,15 @@ class SessionRecorder:
                 return f"\n### {who}\n\n_Input:_ {p.get('input', '')}\n\n"
             case EventType.LLM_CALL:
                 return (
-                    f"- 🧠 LLM · {p.get('prompt_tokens', 0)} + {p.get('completion_tokens', 0)}"
+                    f"- {who} · 🧠 LLM · {p.get('prompt_tokens', 0)} + {p.get('completion_tokens', 0)}"
                     f" tokens · {p.get('ms', 0)} ms\n"
                 )
             case EventType.TOOL_CALL:
-                return f"- 🔧 `{p.get('tool')}` `{p.get('args', '')}`\n"
+                return f"- {who} · 🔧 `{p.get('tool')}` `{p.get('args', '')}`\n"
             case EventType.TOOL_RESULT:
                 mark = "" if p.get("ok", True) else "❌ "
                 result = _clip(str(p.get("result", "")))
-                return f"  - ↳ {mark}`{result}` ({p.get('ms', 0)} ms)\n"
+                return f"  - ↳ {who} · {mark}`{result}` ({p.get('ms', 0)} ms)\n"
             case EventType.ASK_USER:
                 return f"\n**❓ {who} asks:** {p.get('question', '')}\n\n"
             case EventType.USER_REPLY:

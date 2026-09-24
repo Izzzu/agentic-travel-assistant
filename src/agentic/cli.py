@@ -19,6 +19,7 @@ from agentic.logs.console import ConsoleRenderer
 from agentic.logs.events import EventType
 from agentic.logs.recorder import SessionRecorder
 from agentic.patterns.base import Pattern
+from agentic.patterns.concurrent import Concurrent
 from agentic.patterns.sequential import Sequential
 from agentic.patterns.single import SingleAgent
 
@@ -27,10 +28,12 @@ COMMANDS = "/exit quit · /reset clear the conversation · /session show the ses
 
 class PatternName(StrEnum):
     SEQUENTIAL = "sequential"
+    CONCURRENT = "concurrent"
 
 
 PATTERNS: dict[PatternName, Callable[[LLMClient], Pattern]] = {
     PatternName.SEQUENTIAL: Sequential.create,
+    PatternName.CONCURRENT: Concurrent.create,
 }
 
 app = typer.Typer(help="Agentic travel assistant: one trip, five orchestration patterns.")

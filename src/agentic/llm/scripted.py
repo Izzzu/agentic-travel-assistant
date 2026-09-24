@@ -1,3 +1,4 @@
+import asyncio
 import itertools
 from collections import deque
 from collections.abc import Iterable, Sequence
@@ -53,6 +54,7 @@ class ScriptedLLM:
     ) -> LLMResponse:
         self.requests.append(list(messages))
         self.tools_seen.append(list(tools))
+        await asyncio.sleep(0)  # yield like a network call, so concurrent agents interleave
         if not self._responses:
             raise RuntimeError("ScriptedLLM has no responses left")
         return self._responses.popleft()
