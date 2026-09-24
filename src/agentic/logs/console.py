@@ -54,6 +54,15 @@ class ConsoleRenderer:
         match event.type:
             case EventType.SESSION_START:
                 self.console.rule(Text(f"{event.pattern} · {event.session_id}", style="bold"))
+            case EventType.STEP:
+                color, _ = self._style(event.agent, str(p.get("emoji", "")))
+                self.console.rule(
+                    Text.assemble(
+                        f"step {p.get('step')}/{p.get('total')} · ", self._label(event.agent)
+                    ),
+                    style=color,
+                    align="left",
+                )
             case EventType.AGENT_START:
                 self._style(event.agent, str(p.get("emoji", "")))
                 self._line(event.agent, ("▸ working…", "dim"))

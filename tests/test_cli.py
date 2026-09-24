@@ -7,10 +7,21 @@ def test_help() -> None:
     result = CliRunner().invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "--agent" in result.output
+    assert "--pattern" in result.output
 
 
-def test_agent_is_required() -> None:
+def test_agent_or_pattern_is_required() -> None:
     result = CliRunner().invoke(app, [])
+    assert result.exit_code == 2
+
+
+def test_agent_and_pattern_are_exclusive() -> None:
+    result = CliRunner().invoke(app, ["--agent", "hotel", "--pattern", "sequential"])
+    assert result.exit_code == 2
+
+
+def test_unknown_pattern_is_rejected() -> None:
+    result = CliRunner().invoke(app, ["--pattern", "relay"])
     assert result.exit_code == 2
 
 

@@ -28,7 +28,7 @@ class SessionRecorder:
         folder.mkdir(parents=True, exist_ok=True)
         with (folder / "events.jsonl").open("a", encoding="utf-8") as f:
             f.write(event.model_dump_json() + "\n")
-        if event.type is EventType.AGENT_START and event.agent:
+        if event.type in (EventType.STEP, EventType.AGENT_START) and event.agent:
             self._emoji[event.agent] = str(event.payload.get("emoji", ""))
         if text := self._transcript(event):
             with (folder / "transcript.md").open("a", encoding="utf-8") as f:
@@ -57,6 +57,8 @@ class SessionRecorder:
                 )
             case EventType.USER_MESSAGE:
                 return f"\n## 🧑 User\n\n{p.get('text', '')}\n"
+            case EventType.STEP:
+                return f"\n## Step {p.get('step')}/{p.get('total')} · {who}\n"
             case EventType.AGENT_START:
                 return f"\n### {who}\n\n_Input:_ {p.get('input', '')}\n\n"
             case EventType.LLM_CALL:

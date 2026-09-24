@@ -12,6 +12,7 @@ class EventType(StrEnum):
     FINAL_ANSWER = "final_answer"
     AGENT_START = "agent_start"
     AGENT_END = "agent_end"
+    STEP = "step"
     LLM_CALL = "llm_call"
     TOOL_CALL = "tool_call"
     TOOL_RESULT = "tool_result"

@@ -219,3 +219,5 @@ __marimo__/
 
 # Agentic travel assistant session logs
 sessions/
+
+.context/

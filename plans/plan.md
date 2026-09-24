@@ -189,6 +189,7 @@ Every event carries: `session_id`, `timestamp`, `pattern`, `agent` (if any), `ty
 | `tool_call` / `tool_result` | agent, tool, args, result, ms |
 | `ask_user` / `user_reply` | agent, question, answer |
 | `handoff` | from, to, reason |
+| `step` | agent, step number, total steps (sequential) |
 | `speaker_selected` | next speaker, reason (group chat) |
 | `ledger_update` | task ledger / progress ledger (Magentic) |
 | `surprise` | description, e.g. "hotel sold out" |
