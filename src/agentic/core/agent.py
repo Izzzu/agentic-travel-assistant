@@ -5,6 +5,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
+from pydantic import BaseModel
+
 from agentic.core.messages import AgentResult, Message, ToolCallRecord, Usage
 from agentic.core.session import SessionContext
 from agentic.core.tools import Tool, execute_tool_call
@@ -55,7 +57,14 @@ class Agent:
     tools: list[Tool[..., Any]] = field(default_factory=list[Tool[..., Any]])
     max_iterations: int = 8
 
-    async def run(self, messages: Sequence[Message], ctx: SessionContext) -> AgentResult:
+    async def run(
+        self,
+        messages: Sequence[Message],
+        ctx: SessionContext,
+        *,
+        response_format: type[BaseModel] | None = None,
+    ) -> AgentResult:
+        """With `response_format`, the final text is JSON for that model."""
         run_id = secrets.token_hex(4)
         ctx.emit(
             EventType.AGENT_START,
@@ -72,7 +81,9 @@ class Agent:
             text = ""
             for _ in range(self.max_iterations):
                 t0 = time.perf_counter()
-                response = await self.llm.complete(conversation, [t.spec for t in self.tools])
+                response = await self.llm.complete(
+                    conversation, [t.spec for t in self.tools], response_format
+                )
                 usage += response.usage
                 ctx.usage += response.usage
                 ctx.emit(

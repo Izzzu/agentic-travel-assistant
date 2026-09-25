@@ -8,6 +8,12 @@ def test_help() -> None:
     assert result.exit_code == 0
     assert "--agent" in result.output
     assert "--pattern" in result.output
+    assert "--max-rounds" in result.output
+
+
+def test_max_rounds_must_be_positive() -> None:
+    result = CliRunner().invoke(app, ["--pattern", "group_chat", "--max-rounds", "0"])
+    assert result.exit_code == 2
 
 
 def test_agent_or_pattern_is_required() -> None:

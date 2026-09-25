@@ -1,5 +1,4 @@
 import asyncio
-from collections.abc import Callable
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Any
@@ -20,6 +19,7 @@ from agentic.logs.events import EventType
 from agentic.logs.recorder import SessionRecorder
 from agentic.patterns.base import Pattern
 from agentic.patterns.concurrent import Concurrent
+from agentic.patterns.group_chat import MAX_ROUNDS, GroupChat
 from agentic.patterns.sequential import Sequential
 from agentic.patterns.single import SingleAgent
 
@@ -29,12 +29,18 @@ COMMANDS = "/exit quit · /reset clear the conversation · /session show the ses
 class PatternName(StrEnum):
     SEQUENTIAL = "sequential"
     CONCURRENT = "concurrent"
+    GROUP_CHAT = "group_chat"
 
 
-PATTERNS: dict[PatternName, Callable[[LLMClient], Pattern]] = {
-    PatternName.SEQUENTIAL: Sequential.create,
-    PatternName.CONCURRENT: Concurrent.create,
-}
+def create_pattern(name: PatternName, llm: LLMClient, *, max_rounds: int) -> Pattern:
+    match name:
+        case PatternName.SEQUENTIAL:
+            return Sequential.create(llm)
+        case PatternName.CONCURRENT:
+            return Concurrent.create(llm)
+        case PatternName.GROUP_CHAT:
+            return GroupChat.create(llm, max_rounds=max_rounds)
+
 
 app = typer.Typer(help="Agentic travel assistant: one trip, five orchestration patterns.")
 
@@ -134,6 +140,9 @@ def main(
     verbose: Annotated[
         bool, typer.Option("--verbose", "-v", help="Show tool arguments, results and LLM stats.")
     ] = False,
+    max_rounds: Annotated[
+        int, typer.Option(min=1, help="Group chat: specialist messages per turn.")
+    ] = MAX_ROUNDS,
     sessions_dir: Annotated[Path, typer.Option(help="Where sessions are saved.")] = Path(
         "sessions"
     ),
@@ -156,8 +165,9 @@ def main(
         )
     else:
         assert pattern is not None
-        mode = PATTERNS[pattern](llm)
-        label, prompt, info = mode.name, f"[{mode.name}] you>", {}
+        mode = create_pattern(pattern, llm, max_rounds=max_rounds)
+        label, prompt = mode.name, f"[{mode.name}] you>"
+        info = {"max_rounds": max_rounds} if isinstance(mode, GroupChat) else {}
     asyncio.run(
         _run(
             mode,

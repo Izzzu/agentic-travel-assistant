@@ -192,7 +192,6 @@ Every event carries: `session_id`, `timestamp`, `pattern`, `agent` (if any), `ty
 | `step` | agent, step number, total steps (sequential) |
 | `speaker_selected` | next speaker, reason (group chat) |
 | `ledger_update` | task ledger / progress ledger (Magentic) |
-| `surprise` | description, e.g. "hotel sold out" |
 | `error` | agent, exception |
 
 ### Event bus (`logs/bus.py`)
@@ -216,7 +215,7 @@ Files are written incrementally (append per event), so a crashed session is stil
 
 Using `rich`:
 
-- One color + emoji per agent; indented tool calls; highlighted `surprise` events.
+- One color + emoji per agent; indented tool calls.
 - End-of-session summary table: time, tokens, LLM calls, tool calls per agent.
 - Verbosity:
   - default — agent steps, handoffs, final answer (clean demo view)
@@ -498,7 +497,7 @@ In-chat commands: `/exit`, `/reset`, `/session`.
   - Concurrent starts all four agents before any finishes.
   - Group chat respects `max_rounds` and moderator decisions.
   - Handoff only follows edges in the handoff graph.
-  - Magentic re-plans after a `surprise` event.
+  - Magentic re-plans when the task ledger's facts change.
 - **Tool tests** — mock data, surprise, budget math.
 - **Ownership test** — only the Consultant has `ask_user`, in every pattern.
 - **Real LLM runs** — manual smoke test at the end of each phase.

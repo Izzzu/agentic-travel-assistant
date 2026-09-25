@@ -18,7 +18,6 @@ def _render(*, verbose: bool) -> str:
     ctx.emit(
         E.TOOL_RESULT, agent="hotel", run_id="r", call_id="c", result="[red]x[/red]", ok=True, ms=1
     )
-    ctx.emit(E.SURPRISE, agent="hotel", description="Casa Alfama is sold out")
     ctx.emit(E.AGENT_END, agent="hotel", run_id="r", output="ok", tokens=15, ms=1200)
     ctx.end()
     return console.export_text()
@@ -28,7 +27,6 @@ def test_default_view_shows_steps_and_summary() -> None:
     text = _render(verbose=False)
     assert "🏨 hotel" in text
     assert "🔧 search" in text
-    assert "Casa Alfama is sold out" in text
     assert "Session summary" in text
     assert "[red]x[/red]" not in text
 

@@ -100,24 +100,21 @@ class ConsoleRenderer:
                     )
                 )
             case EventType.SPEAKER_SELECTED:
-                self.console.print(
-                    Text.assemble(
-                        "🎤 next: ",
-                        self._label(str(p.get("next_speaker"))),
-                        (f"  {p.get('reason', '')}", "italic"),
-                    )
+                progress = (
+                    f"round {p['round']}/{p['max_rounds']} · " if "round" in p else "",
+                    "dim",
                 )
+                if p.get("finished"):
+                    done = "forced to finish" if p.get("forced") else "finished"
+                    head = Text.assemble("🏁 ", progress, (done, "bold"))
+                else:
+                    speaker = str(p.get("next_speaker"))
+                    self._style(speaker, str(p.get("emoji", "")))
+                    head = Text.assemble("🎤 ", progress, "next: ", self._label(speaker))
+                self.console.print(Text.assemble(head, (f"  {p.get('reason', '')}", "italic")))
             case EventType.LEDGER_UPDATE:
                 self.console.print(
                     Panel(Text(json.dumps(p, indent=2)), title="📒 ledger", border_style="blue")
-                )
-            case EventType.SURPRISE:
-                self.console.print(
-                    Panel(
-                        Text(str(p.get("description", "")), style="bold"),
-                        title="⚡ surprise",
-                        border_style="bold yellow",
-                    )
                 )
             case EventType.ERROR:
                 self._line(event.agent, (f"✗ {p.get('exception', '')}", "bold red"))

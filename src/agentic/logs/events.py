@@ -6,23 +6,22 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class EventType(StrEnum):
-    SESSION_START = "session_start"
-    SESSION_END = "session_end"
-    USER_MESSAGE = "user_message"
-    FINAL_ANSWER = "final_answer"
-    AGENT_START = "agent_start"
-    AGENT_END = "agent_end"
-    STEP = "step"
-    LLM_CALL = "llm_call"
-    TOOL_CALL = "tool_call"
-    TOOL_RESULT = "tool_result"
-    ASK_USER = "ask_user"
-    USER_REPLY = "user_reply"
-    HANDOFF = "handoff"
-    SPEAKER_SELECTED = "speaker_selected"
-    LEDGER_UPDATE = "ledger_update"
-    SURPRISE = "surprise"
-    ERROR = "error"
+    SESSION_START = "session_start"  # all modes (chat loop)
+    SESSION_END = "session_end"  # all modes (chat loop)
+    USER_MESSAGE = "user_message"  # all modes (chat loop)
+    FINAL_ANSWER = "final_answer"  # all modes (chat loop)
+    AGENT_START = "agent_start"  # all modes (Agent.run)
+    AGENT_END = "agent_end"  # all modes (Agent.run)
+    STEP = "step"  # sequential
+    LLM_CALL = "llm_call"  # all modes (Agent.run)
+    TOOL_CALL = "tool_call"  # all modes (Agent.run)
+    TOOL_RESULT = "tool_result"  # all modes (Agent.run)
+    ASK_USER = "ask_user"  # all modes, Travel Consultant only
+    USER_REPLY = "user_reply"  # all modes, Travel Consultant only
+    HANDOFF = "handoff"  # handoff
+    SPEAKER_SELECTED = "speaker_selected"  # group chat
+    LEDGER_UPDATE = "ledger_update"  # magentic
+    ERROR = "error"  # all modes (Agent.run); group chat for invalid moderator decisions
 
 
 class Event(BaseModel):

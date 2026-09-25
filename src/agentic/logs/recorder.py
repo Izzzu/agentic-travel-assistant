@@ -30,6 +30,10 @@ class SessionRecorder:
             f.write(event.model_dump_json() + "\n")
         if event.type in (EventType.STEP, EventType.AGENT_START) and event.agent:
             self._emoji[event.agent] = str(event.payload.get("emoji", ""))
+        if event.type is EventType.SPEAKER_SELECTED and (
+            speaker := event.payload.get("next_speaker")
+        ):
+            self._emoji.setdefault(str(speaker), str(event.payload.get("emoji", "")))
         if text := self._transcript(event):
             with (folder / "transcript.md").open("a", encoding="utf-8") as f:
                 f.write(text)
@@ -86,11 +90,14 @@ class SessionRecorder:
                     f"\n↪️ **{p.get('from_agent')} → {p.get('to_agent')}**: {p.get('reason', '')}\n"
                 )
             case EventType.SPEAKER_SELECTED:
-                return f"\n🎤 **Next: {p.get('next_speaker')}**: {p.get('reason', '')}\n"
+                progress = f"Round {p['round']}/{p['max_rounds']} · " if "round" in p else ""
+                if p.get("finished"):
+                    done = "Forced to finish" if p.get("forced") else "Finished"
+                    return f"\n🏁 **{progress}{done}**: {p.get('reason', '')}\n"
+                speaker = self._label(str(p.get("next_speaker")))
+                return f"\n🎤 **{progress}Next: {speaker}**: {p.get('reason', '')}\n"
             case EventType.LEDGER_UPDATE:
                 return f"\n📒 **Ledger update**\n\n```json\n{json.dumps(p, indent=2)}\n```\n"
-            case EventType.SURPRISE:
-                return f"\n> ⚡ **Surprise:** {p.get('description', '')}\n"
             case EventType.ERROR:
                 return f"\n> ❌ **Error ({who}):** {p.get('exception', '')}\n"
             case EventType.FINAL_ANSWER:

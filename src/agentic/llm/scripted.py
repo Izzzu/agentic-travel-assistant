@@ -41,6 +41,7 @@ class ScriptedLLM:
         self._model = model
         self.requests: list[list[Message]] = []
         self.tools_seen: list[list[ToolSpec]] = []
+        self.formats_seen: list[type[BaseModel] | None] = []
 
     @property
     def model(self) -> str:
@@ -54,6 +55,7 @@ class ScriptedLLM:
     ) -> LLMResponse:
         self.requests.append(list(messages))
         self.tools_seen.append(list(tools))
+        self.formats_seen.append(response_format)
         await asyncio.sleep(0)  # yield like a network call, so concurrent agents interleave
         if not self._responses:
             raise RuntimeError("ScriptedLLM has no responses left")
