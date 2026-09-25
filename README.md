@@ -32,7 +32,7 @@ Demo project demonstrating multi-agent orchestration patterns
 
    Available patterns: `sequential`, `concurrent`, `group_chat`, `handoff`, `magentic`.
 
-Each session is saved under `sessions/`. See [.context/article.md](.context/article.md) for a comparison of the patterns.
+Each session is saved under `sessions/`. See [docs/patterns.md](docs/patterns.md) for a comparison of the patterns.
 
 ## Interacting with the agent
 
