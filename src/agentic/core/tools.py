@@ -31,6 +31,7 @@ class Tool[**P, R]:
     description: str
     args_model: type[BaseModel]
     context_param: str | None = None
+    ends_run: bool = False  # a successful call stops the agent's run (handoffs)
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
         return self.fn(*args, **kwargs)

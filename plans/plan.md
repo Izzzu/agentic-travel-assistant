@@ -408,7 +408,7 @@ uv run app --pattern handoff
 HANDOFF_GRAPH = {
     "consultant": ["flight", "hotel", "activities", "budget"],
     "flight":     ["consultant", "hotel"],
-    "hotel":      ["consultant", "budget"],
+    "hotel":      ["consultant", "flight", "budget"],
     "activities": ["consultant", "budget"],
     "budget":     ["consultant"],
 }

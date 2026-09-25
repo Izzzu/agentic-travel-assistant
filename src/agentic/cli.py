@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import Callable
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Any
@@ -20,6 +21,7 @@ from agentic.logs.recorder import SessionRecorder
 from agentic.patterns.base import Pattern
 from agentic.patterns.concurrent import Concurrent
 from agentic.patterns.group_chat import MAX_ROUNDS, GroupChat
+from agentic.patterns.handoff import Handoff
 from agentic.patterns.sequential import Sequential
 from agentic.patterns.single import SingleAgent
 
@@ -30,6 +32,10 @@ class PatternName(StrEnum):
     SEQUENTIAL = "sequential"
     CONCURRENT = "concurrent"
     GROUP_CHAT = "group_chat"
+    HANDOFF = "handoff"
+
+
+Prompt = str | Callable[[SessionContext], str]
 
 
 def create_pattern(name: PatternName, llm: LLMClient, *, max_rounds: int) -> Pattern:
@@ -40,6 +46,8 @@ def create_pattern(name: PatternName, llm: LLMClient, *, max_rounds: int) -> Pat
             return Concurrent.create(llm)
         case PatternName.GROUP_CHAT:
             return GroupChat.create(llm, max_rounds=max_rounds)
+        case PatternName.HANDOFF:
+            return Handoff.create(llm)
 
 
 app = typer.Typer(help="Agentic travel assistant: one trip, five orchestration patterns.")
@@ -49,7 +57,7 @@ async def chat(
     pattern: Pattern,
     ctx: SessionContext,
     *,
-    prompt: str,
+    prompt: Prompt,
     console: Console,
     folder: Path,
     **info: Any,
@@ -60,7 +68,9 @@ async def chat(
     try:
         while True:
             try:
-                text = (await ctx.io.read(prompt)).strip()
+                text = (
+                    await ctx.io.read(prompt if isinstance(prompt, str) else prompt(ctx))
+                ).strip()
             except (EOFError, KeyboardInterrupt):
                 break
             if not text:
@@ -95,7 +105,7 @@ async def _run(
     llm: AzureOpenAIClient,
     *,
     label: str,
-    prompt: str,
+    prompt: Prompt,
     verbose: bool,
     sessions_dir: Path,
     **info: Any,
@@ -155,19 +165,20 @@ def main(
     except ValueError as exc:
         typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(1) from None
+    info: dict[str, Any] = {}
     if agent is not None:
         single = get_agent(agent, llm)
         mode: Pattern = SingleAgent(single)
-        label, prompt, info = (
-            f"{mode.name}-{single.name}",
-            f"[{single.emoji} {single.name}] you>",
-            {"agent": single.name},
-        )
+        label, info = f"{mode.name}-{single.name}", {"agent": single.name}
+        prompt: Prompt = f"[{single.emoji} {single.name}] you>"
     else:
         assert pattern is not None
         mode = create_pattern(pattern, llm, max_rounds=max_rounds)
         label, prompt = mode.name, f"[{mode.name}] you>"
-        info = {"max_rounds": max_rounds} if isinstance(mode, GroupChat) else {}
+        if isinstance(mode, GroupChat):
+            info = {"max_rounds": max_rounds}
+        elif isinstance(mode, Handoff):
+            prompt, info = mode.prompt, {"max_handoffs": mode.max_handoffs}
     asyncio.run(
         _run(
             mode,

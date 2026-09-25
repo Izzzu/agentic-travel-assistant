@@ -34,6 +34,8 @@ class SessionRecorder:
             speaker := event.payload.get("next_speaker")
         ):
             self._emoji.setdefault(str(speaker), str(event.payload.get("emoji", "")))
+        if event.type is EventType.HANDOFF and (target := event.payload.get("to_agent")):
+            self._emoji.setdefault(str(target), str(event.payload.get("emoji", "")))
         if text := self._transcript(event):
             with (folder / "transcript.md").open("a", encoding="utf-8") as f:
                 f.write(text)
@@ -86,9 +88,9 @@ class SessionRecorder:
                     f"_{p.get('ms', 0)} ms · {p.get('tokens', 0)} tokens_\n"
                 )
             case EventType.HANDOFF:
-                return (
-                    f"\n↪️ **{p.get('from_agent')} → {p.get('to_agent')}**: {p.get('reason', '')}\n"
-                )
+                source = self._label(str(p.get("from_agent")))
+                target = self._label(str(p.get("to_agent")))
+                return f"\n↪️ **{source} → {target}**: {p.get('reason', '')}\n"
             case EventType.SPEAKER_SELECTED:
                 progress = f"Round {p['round']}/{p['max_rounds']} · " if "round" in p else ""
                 if p.get("finished"):

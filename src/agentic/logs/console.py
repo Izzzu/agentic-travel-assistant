@@ -90,6 +90,7 @@ class ConsoleRenderer:
                 if self.verbose and p.get("output"):
                     self.console.print(Text(_clip(str(p["output"]), 600), style="dim"))
             case EventType.HANDOFF:
+                self._style(str(p.get("to_agent")), str(p.get("emoji", "")))
                 self.console.print(
                     Text.assemble(
                         ("↪ ", "bold"),

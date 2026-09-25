@@ -80,5 +80,7 @@ class AgentResult(BaseModel):
     text: str
     open_questions: list[str] = Field(default_factory=list[str])
     tool_calls: list[ToolCallRecord] = Field(default_factory=list[ToolCallRecord])
+    stopped_by: ToolCallRecord | None = None  # the `ends_run` tool call that ended the run
+    messages: list[Message] = Field(default_factory=list[Message])  # added after the input
     usage: Usage = Field(default_factory=Usage)
     ms: float = 0.0

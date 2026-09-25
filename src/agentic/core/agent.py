@@ -75,6 +75,7 @@ class Agent:
         )
         started = time.perf_counter()
         records: list[ToolCallRecord] = []
+        stopped_by: ToolCallRecord | None = None
         usage = Usage()
         try:
             conversation = [Message.system(self.instructions), *messages]
@@ -100,6 +101,7 @@ class Agent:
                     raise AgentError(f"{self.name}: response blocked by the content filter")
                 if not response.tool_calls:
                     text = response.content or ""
+                    conversation.append(Message.assistant(text))
                     break
                 conversation.append(Message.assistant(response.content, response.tool_calls))
                 tools = {t.name: t for t in self.tools}
@@ -109,6 +111,11 @@ class Agent:
                     )
                     records.append(record)
                     conversation.append(Message.tool(call.id, record.result))
+                    if stopped_by is None and record.ok and tools[call.name].ends_run:
+                        stopped_by = record
+                if stopped_by is not None:
+                    text = response.content or ""
+                    break
             else:
                 raise AgentError(f"{self.name}: no final answer after {self.max_iterations} steps")
         except Exception as exc:
@@ -136,6 +143,8 @@ class Agent:
             text=text,
             open_questions=open_questions,
             tool_calls=records,
+            stopped_by=stopped_by,
+            messages=conversation[len(messages) + 1 :],
             usage=usage,
             ms=ms,
         )
