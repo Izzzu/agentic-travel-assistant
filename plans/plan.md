@@ -448,9 +448,11 @@ class TaskLedger(BaseModel):
 
 ```python
 class ProgressLedger(BaseModel):
+    reason: str              # where the work stands, shown to the audience
     is_request_satisfied: bool
     is_in_loop: bool
     is_progress_being_made: bool
+    needs_replan: bool       # a result invalidated the plan (e.g. sold-out hotel)
     next_speaker: str
     instruction: str         # what that agent should do now
 ```

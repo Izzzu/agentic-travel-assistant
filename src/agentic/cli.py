@@ -22,6 +22,7 @@ from agentic.patterns.base import Pattern
 from agentic.patterns.concurrent import Concurrent
 from agentic.patterns.group_chat import MAX_ROUNDS, GroupChat
 from agentic.patterns.handoff import Handoff
+from agentic.patterns.magentic import MAX_STEPS, Magentic
 from agentic.patterns.sequential import Sequential
 from agentic.patterns.single import SingleAgent
 
@@ -33,12 +34,15 @@ class PatternName(StrEnum):
     CONCURRENT = "concurrent"
     GROUP_CHAT = "group_chat"
     HANDOFF = "handoff"
+    MAGENTIC = "magentic"
 
 
 Prompt = str | Callable[[SessionContext], str]
 
 
-def create_pattern(name: PatternName, llm: LLMClient, *, max_rounds: int) -> Pattern:
+def create_pattern(
+    name: PatternName, llm: LLMClient, *, max_rounds: int, max_steps: int = MAX_STEPS
+) -> Pattern:
     match name:
         case PatternName.SEQUENTIAL:
             return Sequential.create(llm)
@@ -48,6 +52,8 @@ def create_pattern(name: PatternName, llm: LLMClient, *, max_rounds: int) -> Pat
             return GroupChat.create(llm, max_rounds=max_rounds)
         case PatternName.HANDOFF:
             return Handoff.create(llm)
+        case PatternName.MAGENTIC:
+            return Magentic.create(llm, max_steps=max_steps)
 
 
 app = typer.Typer(help="Agentic travel assistant: one trip, five orchestration patterns.")
@@ -153,6 +159,9 @@ def main(
     max_rounds: Annotated[
         int, typer.Option(min=1, help="Group chat: specialist messages per turn.")
     ] = MAX_ROUNDS,
+    max_steps: Annotated[
+        int, typer.Option(min=1, help="Magentic: manager steps per turn.")
+    ] = MAX_STEPS,
     sessions_dir: Annotated[Path, typer.Option(help="Where sessions are saved.")] = Path(
         "sessions"
     ),
@@ -173,12 +182,14 @@ def main(
         prompt: Prompt = f"[{single.emoji} {single.name}] you>"
     else:
         assert pattern is not None
-        mode = create_pattern(pattern, llm, max_rounds=max_rounds)
+        mode = create_pattern(pattern, llm, max_rounds=max_rounds, max_steps=max_steps)
         label, prompt = mode.name, f"[{mode.name}] you>"
         if isinstance(mode, GroupChat):
             info = {"max_rounds": max_rounds}
         elif isinstance(mode, Handoff):
             prompt, info = mode.prompt, {"max_handoffs": mode.max_handoffs}
+        elif isinstance(mode, Magentic):
+            info = {"max_steps": max_steps}
     asyncio.run(
         _run(
             mode,

@@ -1,4 +1,3 @@
-import json
 from itertools import cycle
 from typing import Any
 
@@ -8,7 +7,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from agentic.logs.events import Event, EventType
+from agentic.logs.events import LEDGER_SECTIONS, PROGRESS_FLAGS, Event, EventType
 from agentic.logs.stats import SessionStats
 
 PALETTE = ("cyan", "green", "magenta", "yellow", "blue", "bright_red", "bright_cyan")
@@ -113,10 +112,10 @@ class ConsoleRenderer:
                     self._style(speaker, str(p.get("emoji", "")))
                     head = Text.assemble("🎤 ", progress, "next: ", self._label(speaker))
                 self.console.print(Text.assemble(head, (f"  {p.get('reason', '')}", "italic")))
-            case EventType.LEDGER_UPDATE:
-                self.console.print(
-                    Panel(Text(json.dumps(p, indent=2)), title="📒 ledger", border_style="blue")
-                )
+            case EventType.LEDGER_UPDATE if p.get("ledger") == "task":
+                self.console.print(self._task_ledger(p))
+            case EventType.LEDGER_UPDATE if p.get("ledger") == "progress":
+                self.console.print(self._progress_ledger(p))
             case EventType.ERROR:
                 self._line(event.agent, (f"✗ {p.get('exception', '')}", "bold red"))
             case EventType.FINAL_ANSWER:
@@ -127,6 +126,55 @@ class ConsoleRenderer:
                 self.console.print(self.summary_table())
             case _:
                 pass
+
+    def _task_ledger(self, p: dict[str, Any]) -> Panel:
+        added: dict[str, list[str]] = p.get("added") or {}
+        removed: dict[str, list[str]] = p.get("removed") or {}
+        body = Text()
+        if p.get("reason"):
+            body.append(f"{p['reason']}\n", style="italic")
+        for key, title in LEDGER_SECTIONS:
+            body.append(f"{title}\n", style="bold")
+            items: list[str] = p.get(key) or []
+            for item in items:
+                new = item in added.get(key, [])
+                body.append(f"  {'+' if new else '•'} {item}\n", style="green" if new else None)
+            for item in removed.get(key, []):
+                body.append(f"  − {item}\n", style="red strike")
+        body.rstrip()
+        replan = int(p.get("version", 1)) > 1
+        return Panel(
+            body,
+            title=f"📒 task ledger v{p.get('version', 1)}{' · re-plan' if replan else ''}",
+            title_align="left",
+            border_style="yellow" if replan else "blue",
+        )
+
+    def _progress_ledger(self, p: dict[str, Any]) -> Panel:
+        flags = [
+            Text(f"{label} {'✓' if p.get(key) else '✗'}", style="bold" if p.get(key) else "dim")
+            for label, key in PROGRESS_FLAGS
+        ]
+        body = Text(" · ").join(flags)
+        body.append(f" · stalls {p.get('stalls', 0)}\n", style="dim")
+        body.append(f"{p.get('reason', '')}\n", style="italic")
+        match p.get("action"):
+            case "finish":
+                action, border = Text("🏁 request satisfied", style="bold green"), "green"
+            case "replan":
+                action, border = Text("↻ re-plan", style="bold yellow"), "yellow"
+            case _:
+                speaker = str(p.get("next_speaker"))
+                self._style(speaker, str(p.get("emoji", "")))
+                action = Text.assemble("→ ", self._label(speaker), f"  {p.get('instruction', '')}")
+                border = "blue"
+        body.append_text(action)
+        return Panel(
+            body,
+            title=f"📊 progress ledger · step {p.get('step')}/{p.get('max_steps')}",
+            title_align="left",
+            border_style=border,
+        )
 
     def summary_table(self) -> Table:
         stats = self._stats

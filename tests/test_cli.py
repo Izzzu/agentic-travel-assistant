@@ -9,6 +9,12 @@ def test_help() -> None:
     assert "--agent" in result.output
     assert "--pattern" in result.output
     assert "--max-rounds" in result.output
+    assert "--max-steps" in result.output
+
+
+def test_max_steps_must_be_positive() -> None:
+    result = CliRunner().invoke(app, ["--pattern", "magentic", "--max-steps", "0"])
+    assert result.exit_code == 2
 
 
 def test_max_rounds_must_be_positive() -> None:

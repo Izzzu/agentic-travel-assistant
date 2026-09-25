@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from agentic.logs.events import Event, EventType
+from agentic.logs.events import LEDGER_SECTIONS, PROGRESS_FLAGS, Event, EventType
 from agentic.logs.stats import SessionStats
 
 RESULT_PREVIEW = 500
@@ -36,6 +36,9 @@ class SessionRecorder:
             self._emoji.setdefault(str(speaker), str(event.payload.get("emoji", "")))
         if event.type is EventType.HANDOFF and (target := event.payload.get("to_agent")):
             self._emoji.setdefault(str(target), str(event.payload.get("emoji", "")))
+        if event.type is EventType.LEDGER_UPDATE and event.payload.get("action") == "delegate":
+            speaker = str(event.payload.get("next_speaker"))
+            self._emoji.setdefault(speaker, str(event.payload.get("emoji", "")))
         if text := self._transcript(event):
             with (folder / "transcript.md").open("a", encoding="utf-8") as f:
                 f.write(text)
@@ -50,6 +53,35 @@ class SessionRecorder:
             return ""
         emoji = self._emoji.get(agent, "")
         return f"{emoji} {agent}".strip()
+
+    def _task_ledger(self, p: dict[str, Any]) -> str:
+        version = int(p.get("version", 1))
+        added: dict[str, list[str]] = p.get("added") or {}
+        removed: dict[str, list[str]] = p.get("removed") or {}
+        parts = [f"\n### 📒 Task ledger v{version}{' · re-plan' if version > 1 else ''}\n"]
+        if p.get("reason"):
+            parts.append(f"\n_{p['reason']}_\n")
+        for key, title in LEDGER_SECTIONS:
+            items: list[str] = p.get(key) or []
+            rows = [f"- ➕ {x}" if x in added.get(key, []) else f"- {x}" for x in items]
+            rows += [f"- ~~{x}~~" for x in removed.get(key, [])]
+            parts.append(f"\n**{title}**\n\n{'\n'.join(rows) or '- _none_'}\n")
+        return "".join(parts)
+
+    def _progress_ledger(self, p: dict[str, Any]) -> str:
+        flags = " · ".join(f"{label} {'✓' if p.get(key) else '✗'}" for label, key in PROGRESS_FLAGS)
+        match p.get("action"):
+            case "finish":
+                action = "🏁 **Request satisfied**"
+            case "replan":
+                action = "↻ **Re-plan**"
+            case _:
+                speaker = self._label(str(p.get("next_speaker")))
+                action = f"→ **{speaker}**: {p.get('instruction', '')}"
+        return (
+            f"\n📊 **Step {p.get('step')}/{p.get('max_steps')} · progress ledger** · {flags}"
+            f" · stalls {p.get('stalls', 0)}\n\n> {p.get('reason', '')}\n\n{action}\n"
+        )
 
     def _transcript(self, event: Event) -> str | None:
         p: dict[str, Any] = event.payload
@@ -98,8 +130,10 @@ class SessionRecorder:
                     return f"\n🏁 **{progress}{done}**: {p.get('reason', '')}\n"
                 speaker = self._label(str(p.get("next_speaker")))
                 return f"\n🎤 **{progress}Next: {speaker}**: {p.get('reason', '')}\n"
+            case EventType.LEDGER_UPDATE if p.get("ledger") == "task":
+                return self._task_ledger(p)
             case EventType.LEDGER_UPDATE:
-                return f"\n📒 **Ledger update**\n\n```json\n{json.dumps(p, indent=2)}\n```\n"
+                return self._progress_ledger(p)
             case EventType.ERROR:
                 return f"\n> ❌ **Error ({who}):** {p.get('exception', '')}\n"
             case EventType.FINAL_ANSWER:

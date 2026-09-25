@@ -21,7 +21,17 @@ class EventType(StrEnum):
     HANDOFF = "handoff"  # handoff
     SPEAKER_SELECTED = "speaker_selected"  # group chat
     LEDGER_UPDATE = "ledger_update"  # magentic
-    ERROR = "error"  # all modes (Agent.run); group chat for invalid moderator decisions
+    ERROR = "error"  # all modes (Agent.run); group chat / magentic for invalid structured output
+
+
+# how `ledger_update` payloads are rendered: (payload key, label)
+LEDGER_SECTIONS = (("facts", "Facts"), ("assumptions", "Assumptions"), ("plan", "Plan"))
+PROGRESS_FLAGS = (
+    ("satisfied", "is_request_satisfied"),
+    ("progress", "is_progress_being_made"),
+    ("loop", "is_in_loop"),
+    ("re-plan", "needs_replan"),
+)
 
 
 class Event(BaseModel):
