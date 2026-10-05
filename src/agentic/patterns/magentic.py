@@ -15,7 +15,7 @@ from agentic.logs.events import EventType
 Speaker = Literal["flight", "hotel", "activities", "budget"]
 Action = Literal["delegate", "replan", "finish"]
 MAX_STEPS = 15
-MAX_STALLS = 1  # stalled steps tolerated before a re-plan
+MAX_STALLS = 2  # stalled steps tolerated before a re-plan
 
 
 class TaskLedger(BaseModel):
@@ -176,7 +176,8 @@ class Magentic:
                 instruction = PROGRESS.format(step=step, max_steps=self.max_steps)
                 progress = await self._ask(ProgressLedger, brief(instruction), ctx)
                 stalled = progress.is_in_loop or not progress.is_progress_being_made
-                stalls = stalls + 1 if stalled else max(0, stalls - 1)
+                if stalled:
+                    stalls += 1
                 action: Action = "delegate"
                 if progress.is_request_satisfied:
                     action = "finish"

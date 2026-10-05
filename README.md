@@ -43,3 +43,7 @@ In-chat commands:
 - `/exit` (or `/quit`) — end the chat
 - `/reset` — clear the conversation history and start over
 - `/session` — print the path to the current session folder
+
+## Mock data
+
+The project includes mock data for testing purposes. You can find it under the `mock_data/` directory. This data is used to simulate responses from various agents.

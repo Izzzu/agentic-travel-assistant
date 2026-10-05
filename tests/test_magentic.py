@@ -148,6 +148,10 @@ async def test_stalling_triggers_a_replan(tmp_path: Path) -> None:
             reply("TP941."),
             progress("flight", "Find flights again.", moving=False),
             reply("TP941."),
+            progress("flight", "Try a different flight search."),
+            reply("TP942."),
+            progress("flight", "Find flights again.", moving=False, loop=True, reason="Looping."),
+            reply("TP941."),
             progress("flight", "Find flights again.", moving=False, loop=True, reason="Looping."),
             ledger(["budget: check the total"]),
             progress(done=True),
@@ -157,14 +161,16 @@ async def test_stalling_triggers_a_replan(tmp_path: Path) -> None:
 
     folder, _ = await _run(tmp_path, Magentic.create(llm), ["Plan Lisbon"])
 
-    progress_updates = [e.payload for e in _events(folder, E.LEDGER_UPDATE)][1:4]
+    progress_updates = [e.payload for e in _events(folder, E.LEDGER_UPDATE)][1:6]
     assert [(p["stalls"], p["action"]) for p in progress_updates] == [
         (0, "delegate"),
         (1, "delegate"),
-        (2, "replan"),
+        (1, "delegate"),
+        (2, "delegate"),
+        (3, "replan"),
     ]
-    replanned = _events(folder, E.LEDGER_UPDATE)[4].payload
-    assert replanned["reason"] == "No progress for 2 steps: Looping."
+    replanned = _events(folder, E.LEDGER_UPDATE)[6].payload
+    assert replanned["reason"] == "No progress for 3 steps: Looping."
     assert replanned["added"]["plan"] == ["budget: check the total"]
 
 
