@@ -13,7 +13,7 @@ from agentic.llm.base import LLMClient
 from agentic.logs.events import EventType
 
 Speaker = Literal["flight", "hotel", "activities", "budget"]
-Action = Literal["delegate", "replan", "finish"]
+Action = Literal["delegate", "ask_user", "replan", "finish"]
 MAX_STEPS = 15
 MAX_STALLS = 2  # stalled steps tolerated before a re-plan
 
@@ -34,6 +34,8 @@ class ProgressLedger(BaseModel):
     is_in_loop: bool
     is_progress_being_made: bool
     needs_replan: bool  # a result invalidated the plan, e.g. a sold-out hotel
+    needs_user_input: bool  # specialists cannot proceed without the traveller's answer
+    question: str  # batched question for the traveller; empty when no input is needed
     next_speaker: Speaker
     instruction: str  # what that agent should do now
 
@@ -48,6 +50,8 @@ ledger, answer with its JSON only.
 the specialist needs.
 - When a result contradicts the plan or its assumptions (e.g. an option is sold out, or the plan \
 is over budget), update the facts and re-plan instead of carrying on.
+- When specialists cannot proceed without missing information, ask the traveller one batched \
+question, then update the ledger from their answer before delegating.
 - Never do arithmetic yourself; totals and budget checks come from Budget.
 - At the end you write the final plan. If only the traveller can decide something, use ask_user."""
 
@@ -57,7 +61,8 @@ Before anyone works, write the task ledger for the latest message:
 - facts: what the request or the conversation states or has verified
 - assumptions: what the plan relies on that nobody has verified yet (e.g. availability, prices, \
 fitting the budget)
-- plan: short steps, each starting with the specialist who does it (e.g. `hotel: ...`); end with \
+- plan: if essential traveller details are missing, start with `consultant: ask ...`; otherwise \
+use short steps starting with the specialist that does each one (e.g. `hotel: ...`); end with \
 Budget checking the chosen options against the budget
 Leave the plan empty when the message needs no specialists (a greeting, a question you can \
 answer from the conversation)."""
@@ -72,7 +77,10 @@ in the work, and nothing a specialist can fix is left
 - is_progress_being_made: the last step added something new
 - needs_replan: a result contradicts the plan or its assumptions, so the remaining steps no \
 longer lead to a valid plan
-- next_speaker, instruction: who acts next and exactly what they should do"""
+- needs_user_input: no specialist can continue until the traveller supplies missing information
+- question: when user input is needed, one batched question; otherwise an empty string
+- next_speaker, instruction: who acts next and exactly what they should do; ignored when user \
+input is needed"""
 
 REPLAN = """\
 ## Re-plan
@@ -86,6 +94,11 @@ TASK = """\
 The manager assigned you: {instruction}
 Do only this. Build on the work above instead of repeating it, and use your tools for every new \
 fact or price."""
+
+ASK = """\
+## Ask the traveller
+Call ask_user with this exact batched question: {question}
+After the traveller answers, acknowledge their answer briefly."""
 
 FINAL = """\
 ## Final answer
@@ -181,11 +194,44 @@ class Magentic:
                 action: Action = "delegate"
                 if progress.is_request_satisfied:
                     action = "finish"
+                elif progress.needs_user_input:
+                    action = "ask_user"
                 elif progress.needs_replan or stalls > MAX_STALLS:
                     action = "replan"
                 self._announce_progress(progress, step, stalls, action, ctx)
                 if action == "finish":
                     break
+                if action == "ask_user":
+                    question = progress.question.strip()
+                    if not question:
+                        self._fail("requested user input without a question", ctx)
+                    result = await self.manager.run(
+                        [*ctx.history, brief(ASK.format(question=question))], ctx
+                    )
+                    answer = next(
+                        (
+                            record.result
+                            for record in reversed(result.tool_calls)
+                            if record.name == "ask_user" and record.ok
+                        ),
+                        None,
+                    )
+                    if answer is None:
+                        self._fail("did not call ask_user when user input was required", ctx)
+                    work.append(
+                        Work(
+                            step,
+                            self.manager,
+                            f"Ask the traveller: {question}",
+                            f"Traveller answered: {answer}",
+                        )
+                    )
+                    why = f"Traveller supplied required information: {progress.reason}"
+                    updated = await self._ask(TaskLedger, brief(REPLAN.format(why=why)), ctx)
+                    version += 1
+                    self._announce_task(updated, ledger, version, why, ctx)
+                    ledger, stalls = updated, 0
+                    continue
                 if action == "replan":
                     why = (
                         f"The plan no longer works: {progress.reason}"

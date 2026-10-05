@@ -35,6 +35,8 @@ def progress(
     moving: bool = True,
     loop: bool = False,
     replan: bool = False,
+    needs_user_input: bool = False,
+    question: str = "",
 ) -> LLMResponse:
     entry = ProgressLedger(
         reason=reason,
@@ -42,6 +44,8 @@ def progress(
         is_in_loop=loop,
         is_progress_being_made=moving,
         needs_replan=replan,
+        needs_user_input=needs_user_input,
+        question=question,
         next_speaker=speaker,
         instruction=instruction,
     )
@@ -202,6 +206,52 @@ async def test_empty_plan_replies_without_specialists(tmp_path: Path) -> None:
         ("user", "hello"),
         ("assistant", "Hi!"),
     ]
+
+
+async def test_manager_asks_user_when_specialists_are_blocked(tmp_path: Path) -> None:
+    question = "Which destination, dates, group size, origin, budget and interests do you want?"
+    llm = ScriptedLLM(
+        [
+            ledger(["consultant: collect the missing trip details"]),
+            progress(
+                reason="Specialists cannot proceed without the trip details.",
+                needs_user_input=True,
+                question=question,
+            ),
+            call_tool("ask_user", {"question": question}),
+            reply("Thanks, I have the trip details."),
+            ledger(
+                ["flight: find flights"],
+                facts=["Traveller chose Lisbon in November from Zurich for 3 people."],
+            ),
+            progress("flight", "Find flights for the confirmed trip."),
+            reply("TP935 is available."),
+            progress(reason="The requested planning step is complete.", done=True),
+            reply("Here is the plan."),
+        ]
+    )
+
+    folder, _ = await _run(
+        tmp_path,
+        Magentic.create(llm),
+        ["Plan a vacation for me in November"],
+        ["Lisbon, 9-11 November, three people from Zurich, CHF 1,500, food and beaches"],
+    )
+
+    updates = _events(folder, E.LEDGER_UPDATE)
+    assert [(event.payload["ledger"], event.payload.get("action")) for event in updates] == [
+        ("task", None),
+        ("progress", "ask_user"),
+        ("task", None),
+        ("progress", "delegate"),
+        ("progress", "finish"),
+    ]
+    [user_reply] = _events(folder, E.USER_REPLY)
+    flight_start = next(
+        event for event in _events(folder, E.AGENT_START) if event.agent == "flight"
+    )
+    assert user_reply.agent == "consultant"
+    assert user_reply.seq < flight_start.seq
 
 
 async def test_invalid_ledger_fails_the_turn(tmp_path: Path) -> None:

@@ -77,9 +77,9 @@ This handoff implementation can be considered a subtype of group chat: agents sh
 How a turn works:
 
 1. The Travel Consultant, acting as manager, writes the task ledger (facts, assumptions, plan). If the plan is empty, as for a greeting, it just replies and no specialist runs.
-2. Before each step, it writes a progress ledger: is the request done, is it stuck in a loop, is progress being made, who acts next, and with what instruction.
+2. Before each step, it writes a progress ledger: is the request done, is it stuck in a loop, is progress being made, does the traveller need to provide essential details, and who acts next with what instruction. If user input is required, the Consultant asks one batched question and updates the task ledger from the answer before delegating.
 3. It re-plans when a result breaks the plan, or when the stall counter goes above `MAX_STALLS = 2`. A step counts as stalled when there's a loop or no progress. Productive steps leave the counter unchanged; a re-plan resets it. The new ledger updates the facts and assumptions and writes a new plan.
-4. At the end, it writes the final plan, and can call `ask_user` if the traveller needs to choose between options. If `--max-steps` runs out first, it writes the plan anyway, with a warning.
+4. At the end, it writes the final plan and can call `ask_user` if the traveller needs to choose between options. If `--max-steps` runs out first, it writes the plan anyway, with a warning.
 5. Specialists receive the request, the current ledger, all work done so far, and their own instruction.
 
 ### Implementation Flow diagram
