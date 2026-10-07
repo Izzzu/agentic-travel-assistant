@@ -20,7 +20,7 @@ In the sequential pattern, agents take turns performing their tasks one after an
 
 This pattern suits tasks that require a strict order of execution, where each step depends on the one before it.
 
-![Conceptual diagram](./sequential.png)
+![Conceptual diagram](./assets/sequential.png)
 
 Examples:
 - A development loop (e.g., writing code, testing, and reviewing in a fixed sequence)
@@ -32,13 +32,13 @@ A similar workflow to sequential, but agents perform their tasks simultaneously 
 Examples:
 - Composing multiple independent tasks at once (e.g., fetching data from different sources in parallel)
 
-![Conceptual diagram](./concurrent.png)
+![Conceptual diagram](./assets/concurrent.png)
 
 ## Group chat
 
 Multiple agents interact in a shared group chat, coordinating their actions and sharing information to reach a common goal.
 
-![Conceptual diagram](./group_chat.png)
+![Conceptual diagram](./assets/group_chat.png)
 
 ### How it works in the current implementation
 
@@ -54,7 +54,7 @@ Other ways to implement group chat:
 
 Agents pass control directly to allowed targets in `HANDOFF_GRAPH`. Each agent sees the full conversation and can hand off with a reason or reply to end the turn.
 
-![Conceptual diagram](./handoff.png)
+![Conceptual diagram](./assets/handoff.png)
 
 1. The Consultant receives the request.
 2. The active agent uses its specialist tools.
@@ -72,7 +72,7 @@ This handoff implementation can be considered a subtype of group chat: agents sh
 
 ### Conceptual diagram
 
-![Conceptual diagram](./magentic.png)
+![Conceptual diagram](./assets/magentic.png)
 
 How a turn works:
 
