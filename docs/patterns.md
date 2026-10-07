@@ -6,7 +6,7 @@ It's tempting to reach for the most powerful pattern every time, but each one co
 
 This repo implements a fictional multi-agent travel assistant to show these patterns in action. To run the agent follow the instructions in the [README](../README.md).
 
-Libraries such as AutoGen already help with implementing multi-agent orchestration. This repo uses a custom implementation instead, for learning purposes.
+Libraries such as AutoGen already help with implementing multi-agent orchestration. This repo uses a custom implementation instead, for learning purposes. The Handoff and Magentic patterns are also built with AutoGen for comparison, see [AutoGen version](./README.md#autogen-version).
 
 ## Demo purpose
 
@@ -146,10 +146,14 @@ This is not a formal evaluation, just a stats comparison from a single run for i
 | Handoff | Yes | No: Activities never ran | ⚠️ CHF 1,020, flights and hotel only | Fastest but incomplete: Budget replied to the traveller and control never went back to the Consultant |
 | Magentic | No | Yes | ✅ CHF 1,350 (CHF 150 left) | Good, but the most expensive (no re-plan) |
 
-## When Magentic shines
+## Magentic vs Handoff
 
-The Magentic pattern is particularly useful when the task is a bit ambiguous, or when the request specifies the desired output but not the exact steps to get there.
+The Magentic and Handoff patterns are particularly useful when a task is somewhat ambiguous, or when the request specifies the desired output but not the exact steps to get there.
 
-Let's see such prompt in action.
+The choice between them should be backed by evaluation across multiple runs, to account for variability in the agents' responses and the specific requirements of the task at hand.
 
-TBD
+Handoff requires agents to know about each other in order to delegate tasks and manage the handoff process, which couples the agents. Many systems instead use a central orchestrator to handle coordination. This reduces the need for direct agent-to-agent knowledge and makes it easier to plug in new agents or change the orchestration logic without modifying the agents themselves. 
+
+## Combining orchestration patterns
+
+If the orchestration task is very broad or complex, it's useful to combine more than one pattern and choose between them depending on the task profile. 
