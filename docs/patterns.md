@@ -4,9 +4,9 @@ This project gives an overview and comparison of orchestration patterns for mult
 
 It's tempting to reach for the most powerful pattern every time, but each one comes with its own trade-offs in coordination, efficiency, and flexibility.
 
-This repo implements a fictional multi-agent travel assistant to show these patterns in action. To run the agent follow the instructions in the [README](../README.md).
+This repo implements a fictional multi-agent travel assistant to show these patterns in action. To run the agent follow the instructions in the [README](https://github.com/Izzzu/agentic-travel-assistant#readme).
 
-Libraries such as AutoGen already help with implementing multi-agent orchestration. This repo uses a custom implementation instead, for learning purposes. The Handoff and Magentic patterns are also built with AutoGen for comparison, see [AutoGen version](./README.md#autogen-version).
+Libraries such as AutoGen already help with implementing multi-agent orchestration. This repo uses a custom implementation instead, for learning purposes. The Handoff and Magentic patterns are also built with AutoGen for comparison, see [AutoGen version](https://github.com/Izzzu/agentic-travel-assistant#autogen-version).
 
 ## Demo purpose
 
