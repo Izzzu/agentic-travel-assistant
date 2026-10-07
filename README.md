@@ -44,6 +44,22 @@ In-chat commands:
 - `/reset` — clear the conversation history and start over
 - `/session` — print the path to the current session folder
 
+## AutoGen version
+
+The Handoff and Magentic patterns are also built with [AutoGen](https://microsoft.github.io/autogen/stable/), in a separate package (`src/agentic_autogen/`) that has its own agent prompts and reuses the mocked tools:
+
+```bash
+uv sync --extra autogen
+uv run app-autogen --pattern handoff
+uv run app-autogen --pattern magentic
+```
+
+The chat accepts `/reset` and `/exit`. Magentic also takes `--max-turns` and `--max-stalls`.
+
+It uses the same `.env` as the main app. Optionally set `AZURE_OPENAI_MODEL` to the base model name of your deployment (for example `gpt-5.5-2026-04-24`) to silence AutoGen's "resolved model mismatch" warning; `AZURE_OPENAI_API_VERSION` defaults to `2024-10-21`.
+
+It prints AutoGen's default console output and does not write session files. See [docs/autogen.md](docs/autogen.md) for how the two implementations differ.
+
 ## Mock data
 
 The project includes mock data for testing purposes. You can find it under the `mock_data/` directory. This data is used to simulate responses from various agents.
